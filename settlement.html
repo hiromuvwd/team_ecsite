@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8" />
+
+<link href="/css/reset.css" th:href="@{/css/reset.css}" rel="stylesheet" />
+<link href="/css/style.css" th:href="@{/css/style.css}" rel="stylesheet" />
+
+<title>宛先・決済選択 | grapes</title>
+</head>
+<body>
+
+<header th:insert="fragments/page_header::pageHeader"></header>
+
+<main>
+	<div class="container cart">
+		<div>
+			<!--  宛先情報があり、格納されている要素数が0でない場合は表示する --> 
+			<h2 th:if="${destinations != null && destinations.size()  > 0}">宛先を選択し、決済を完了します。</h2>
+			<!--  宛先情報があり、格納されている要素数が0でない場合は表示する -->
+			<p class="info" th:if="${destinations != null && destinations.size()  > 0}">宛先の新規登録、削除も可能です。</p>
+			<!--  宛先情報がなく、格納されている要素数が0の場合は表示する -->
+			<p class="info" th:if="${destinations == null || destinations.size()  == 0}">宛先情報がありません。新規登録してください。</p>
+		</div>
+		<!--  宛先情報があり、格納されている要素数が0でない場合は表示する -->
+		<table class="destination" th:if="${destinations != null && destinations.size()  > 0}">
+			<tr>
+				<th>選択</th><th>宛先氏名</th><th>住所</th><th>電話番号</th>
+			</tr>
+			<tr th:each="destination, st: ${destinations}">
+				<td>
+				 	<input type="radio" name="id" th:value="${destination.id}" th:checked="${st.index==0}" class="radio"  />
+				</td>
+				<td>
+					<span th:text="${destination.familyName}"></span><span>　</span><span th:text="${destination.firstName}"></span>
+				</td>
+					<td th:text="${destination.address}" />
+					<td th:text="${destination.telNumber}" />
+			</tr>
+		</table>
+		<div class="buttonArea">
+			<!-- 削除ボタン：論理削除へ -->
+			<!--  宛先情報があり、格納されている要素数が0でない場合は表示する -->
+			<button id="deleteButton" th:if="${destinations != null && destinations.size()  > 0}">削除</button>
+			<!-- 新規宛先ボタン：宛先情報入力画面に遷移 -->
+			<form id="destinationForm" action="/grapes/destination/" method="post">
+				<button type="submit">新規宛先</button>
+			</form>
+			<!-- 決済ボタン：決済処理へ
+			宛先情報があり、格納されている要素数が0でない場合は表示する -->
+			<button id="settlementButton" th:if="${destinations != null && destinations.size()  > 0}">決済</button>
+		</div>
+	</div>
+</main>
+<script>
+// 削除ボタンクリック時、ラジオボタンが選択されているかをチェック。選択された宛先情報のIDをチェックし、紐づけられた宛先情報の論理削除へ
+$(() => {
+	$('#deleteButton').on('click', () => {
+		let checked = $('.radio:checked');
+		let destinationId = $(checked).val();
+		deleteDestination(destinationId, checked);
+	});
+
+// 決済ボタンクリック時、ラジオボタンが選択されているかをチェック。選択された宛先情報のIDをチェックし、Settlement.htmlに返す
+	$('#settlementButton').on('click', () => {
+		let checked = $('.radio:checked');
+		let destinationId = $(checked).val();
+		settlement(destinationId);
+	});
+});
+
+// 選択された宛先情報の論理削除を行ない、テーブルから削除する
+function deleteDestination(destinationId, checked) {
+	$.ajax({
+		type: 'POST',
+		url: '/grapes/destination/delete',
+		data: JSON.stringify({'destinationId': destinationId}),
+		datatype: 'json',
+		contentType: 'application/json',
+	})
+	.then((result) => {
+		$(checked).parent().parent().remove();
+		let radioList = $('.radio');
+		<!--  ラジオボタンの値が0だったら、indexに遷移-->
+		if (radioList.length == 0) {
+			location.replace('/grapes/settlement/');
+		}
+		//  ラジオボタンに値が残っていたら、エラーのアラートを表示
+		radioList[0].checked = true;
+	}, () => {
+		alert('Error: ajax connection failed.');
+	});
+}
+</script>
+
+</body>
+</html>
